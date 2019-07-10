@@ -1,20 +1,20 @@
 #include "notify.h"
 
-void notify(int, struct ethhdr *);
+void notify(int, struct ethhdr *, char *, int);
 
 int main(int argc, char const *argv[])
 {    
-    init(0b111111, notify);
+    init(0b010000, notify);
 }
 
-void notify(int protocol, struct ethhdr *header)
+void notify(int protocol, struct ethhdr *header, char *payload, int payload_size)
 {
-    printf("%04x\n", protocol);
+    printf("\nProtocol: %04x\nPayload:\n", protocol);
+    printbuffer(payload, payload_size);
 }
 
 void printbuffer(char buffer[], int buf_len)
 {
-    printf("\n");
     for (int i = 0; i < buf_len; i++)
     {
         int is_div_by_four = (i+1) % 6;
@@ -25,7 +25,7 @@ void printbuffer(char buffer[], int buf_len)
     printf("\n");
 }
 
-void init(int notify_on, void (* handler)(int, struct ethhdr *))
+void init(int notify_on, void (* handler)(int, struct ethhdr *, char *, int))
 {
     int sock_raw = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock_raw == -1)
@@ -44,34 +44,34 @@ void init(int notify_on, void (* handler)(int, struct ethhdr *))
             continue;
         }
         struct ethhdr *header = (struct ethhdr *)buffer;
-        //printbuffer(buffer, size);
         int protocol = ntohs(header->h_proto);
+        char *payload = (buffer + sizeof(struct ethhdr));
+        int invoke = 0;
         switch(protocol)
         {
             case ETH_P_IP:
-                if (!(notify_on & 0b100000))
-                    break;
+                invoke = (notify_on & 0b100000);
+                break;
             case ETH_P_ARP:
-                if (!(notify_on & 0b010000))
-                    break;
+                invoke = (notify_on & 0b010000);
+                break;
             case 0x0842:
-                if (!(notify_on & 0b001000))
-                    break;
+                invoke = (notify_on & 0b001000);
+                break;
             case ETH_P_RARP:
-                if (!(notify_on & 0b000100))
-                    break;
+                invoke = (notify_on & 0b000100);
+                break;
             case 0x814c:
-                if (!(notify_on & 0b000010))
-                    break;
+                invoke = (notify_on & 0b000010);
+                break;
             case ETH_P_IPV6:
-                if (!(notify_on & 0b000001))
-                    break;
+                invoke = (notify_on & 0b000001);
+                break;
             default:
-                if (notify_on & 0b111111)
-                {
-                    handler(protocol, header);
-                }            
+                invoke = (notify_on == 0b111111);                 
         }
+        if (invoke)
+            handler(protocol, header, payload, size - sizeof(header));
     }
     return;
 }

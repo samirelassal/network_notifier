@@ -11,7 +11,7 @@
 void printbuffer(char [], int);
 
 /*
-void init(int notify_on, void (* handler)(int protocol, struct ethhdr *header))
+void init(int notify_on, void (* handler)(int protocol, struct ethhdr *header, char **payload, int payload_size))
 notify_on: describes on which protocols to notify:
     bits from left to right:
     1: IPv4
@@ -24,4 +24,4 @@ handler: The handling function expecting two arguments
     protocol: The protocol causing this notification
     header: The header of the received package
  */
-void init(int, void (* f)(int, struct ethhdr *));
+void init(int, void (* f)(int, struct ethhdr *, char *, int));
